@@ -1,0 +1,44 @@
+{
+  "name": "@rmosyazilim/chat-widget",
+  "version": "0.1.0",
+  "description": "Otel uygulamaları için drop-in gerçek zamanlı chat widget altyapısı",
+  "license": "UNLICENSED",
+  "type": "module",
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run build"
+  },
+  "peerDependencies": {
+    "firebase": "^11",
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "firebase": "^11.10.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "terser": "^5.51.2",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.0"
+  }
+}
