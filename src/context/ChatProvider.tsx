@@ -17,6 +17,7 @@ import {
 import { getOrInitFirebase } from "../firebase/app";
 import { signInWithFirebaseToken } from "../firebase/auth";
 import { request } from "../http/client";
+import { ConversationsProvider } from "./ConversationsProvider";
 import type {
   ChatConfig,
   ChatContextValue,
@@ -143,6 +144,8 @@ export function ChatProvider({
   );
 
   return (
-    <ChatContext.Provider value={value}>{children}</ChatContext.Provider>
+    <ChatContext.Provider value={value}>
+      <ConversationsProvider>{children}</ConversationsProvider>
+    </ChatContext.Provider>
   );
 }

@@ -1,12 +1,9 @@
 import {
-  collection,
   doc,
   increment,
   onSnapshot,
-  query,
   serverTimestamp,
   setDoc,
-  where,
   type Firestore,
   type Unsubscribe,
 } from "firebase/firestore";
@@ -55,36 +52,59 @@ function mapConversation(
   };
 }
 
-/** Kullanıcının dahil olduğu konuşmaların özetlerini gerçek zamanlı dinler. */
-export function subscribeConversations(
+/**
+ * Verilen konuşma dokümanlarını tek tek gerçek zamanlı dinler.
+ * (Koleksiyon sorgusu yerine doküman bazlı dinleme — Firestore kuralları
+ * yalnızca tekil doküman okumaya izin verse de çalışır.)
+ * Henüz olmayan konuşmalar listede yer almaz.
+ */
+export function subscribeConversationDocs(
   db: Firestore,
+  conversationIds: string[],
   userId: string,
   onChange: (conversations: ChatConversation[]) => void,
   onError?: (error: Error) => void,
 ): Unsubscribe {
-  const q = query(
-    collection(db, "conversations"),
-    where("participants", "array-contains", userId),
+  const byId = new Map<string, ChatConversation | null>();
+
+  const emit = () => {
+    // Tüm dokümanların ilk snapshot'ı gelmeden yayınlama → tek seferde dolu liste
+    if (byId.size < conversationIds.length) return;
+    const list: ChatConversation[] = [];
+    for (const c of byId.values()) if (c) list.push(c);
+    onChange(list);
+  };
+
+  if (conversationIds.length === 0) onChange([]);
+
+  const unsubs = conversationIds.map((id) =>
+    onSnapshot(
+      conversationDoc(db, id),
+      (snap) => {
+        byId.set(
+          id,
+          snap.exists()
+            ? mapConversation(
+                id,
+                // Bekleyen serverTimestamp için tahmini değer → sıralama anında doğru olur
+                snap.data({ serverTimestamps: "estimate" }) as Record<string, unknown>,
+                userId,
+              )
+            : null,
+        );
+        emit();
+      },
+      (err) => {
+        byId.set(id, null);
+        onError?.(err);
+        emit();
+      },
+    ),
   );
 
-  return onSnapshot(
-    q,
-    (snap) => {
-      onChange(
-        snap.docs.map((d) =>
-          mapConversation(
-            d.id,
-            // Bekleyen serverTimestamp için tahmini değer → sıralama anında doğru olur
-            d.data({ serverTimestamps: "estimate" }) as Record<string, unknown>,
-            userId,
-          ),
-        ),
-      );
-    },
-    (err) => {
-      onError?.(err);
-    },
-  );
+  return () => {
+    for (const u of unsubs) u();
+  };
 }
 
 /** Mesaj gönderildiğinde son mesajı yazar ve alıcının okunmamış sayacını artırır. */
