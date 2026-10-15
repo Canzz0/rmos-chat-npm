@@ -9,10 +9,10 @@ import type { FirebaseApp } from "firebase/app";
 import type { Auth } from "firebase/auth";
 import type { Firestore } from "firebase/firestore";
 import {
-  DEFAULT_BASE_URL,
   DEFAULT_FIREBASE_CONFIG,
   DEFAULT_FIREBASE_TOKEN_PATH,
   DEFAULT_USERS_PATH,
+  getDefaultBaseUrl,
 } from "../defaults";
 import { getOrInitFirebase } from "../firebase/app";
 import { signInWithFirebaseToken } from "../firebase/auth";
@@ -34,7 +34,7 @@ export interface ChatProviderProps extends ChatConfig {
 export function ChatProvider({
   token,
   userId,
-  baseUrl = DEFAULT_BASE_URL,
+  baseUrl = getDefaultBaseUrl(),
   firebaseConfig = DEFAULT_FIREBASE_CONFIG,
   firebaseTokenPath = DEFAULT_FIREBASE_TOKEN_PATH,
   usersPath = DEFAULT_USERS_PATH,

@@ -19,7 +19,7 @@ export interface ChatConfig {
   token: string;
   /** Giriş yapan kullanıcının ID'si */
   userId: string;
-  /** @internal Genellikle verilmez; varsayılan RMOS API URL'i kullanılır */
+  /** @internal Genellikle verilmez; host "dev" ile başlıyorsa develop, değilse production RMOS API URL'i kullanılır */
   baseUrl?: string;
   /** @internal Genellikle verilmez; varsayılan Firebase config kullanılır */
   firebaseConfig?: FirebaseWebConfig;
