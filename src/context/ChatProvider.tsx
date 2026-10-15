@@ -91,8 +91,16 @@ export function ChatProvider({
           );
         }
 
-        await signInWithFirebaseToken(handles.auth, tokenRes.token);
+        const cred = await signInWithFirebaseToken(handles.auth, tokenRes.token);
         if (cancelled) return;
+
+        // Firestore kuralları ve okundu bilgisi uid === userId varsayar
+        if (cred.user.uid !== userId) {
+          console.warn(
+            `[rmos-chat] Firebase uid (${cred.user.uid}) ile userId (${userId}) farklı; ` +
+              "mesaj gönderme ve okundu bilgisi çalışmayabilir.",
+          );
+        }
 
         setFirebaseReady(true);
       } catch (err: unknown) {

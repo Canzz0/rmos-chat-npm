@@ -33,7 +33,16 @@ import { RmosChat } from "@rmosyazilim/chat-widget";
 <RmosChat token={token} userId="19" floating />
 ```
 
-**Akış:** buton → kişi listesi → sohbet. Dışarı tıkla veya `Esc` ile kapanır.
+**Akış:** buton → kart (solda kişiler, sağda sohbet; dar ekranda tek panel). Dışarı tıkla veya `Esc` ile kapanır.
+
+**Mesajlar:**
+
+- **Sayfalama:** sohbet açılınca yalnızca son 10 mesaj okunur. Üstteki _Eski mesajları yükle_ her tıklamada 10 eski mesaj daha ekler (10 → 20 → 30). Yüklenmiş sayfalar yeniden okunmaz; konuşmanın tamamı hiçbir zaman tek seferde çekilmez.
+- **Okundu bilgisi:** kendi mesajlarının altında saat (gönderiliyor), tek tik (gönderildi) ve renkli çift tik (okundu) görünür.
+- **Düzenleme:** kendi mesajının menüsünden (balonun sağ üstü) _Düzenle_ seçilir. Düzenlenen mesaj "düzenlendi" etiketi alır. Mesaj okunmuşsa okundu bilgisi sıfırlanır ve karşı taraf tekrar okuyana kadar tek tik görünür.
+- **Silme:** menüden _Sil_ seçilip onaylanınca mesaj herkes için "Bu mesaj silindi" olur.
+
+> Firestore kuralları; gönderenin kendi mesajını (`conversations/{id}/messages/{msgId}`) güncellemesine ve katılımcıların konuşma dokümanına `readAt` yazmasına izin vermelidir. Hazır kurallar: [`firestore.rules`](firestore.rules) (Firebase Console → Firestore → Kurallar).
 
 ### Props
 

@@ -26,6 +26,16 @@ export const RMOS_CSS = `
   --rmos-badge: #ef4444;
   --rmos-badge-fg: #ffffff;
   --rmos-radius: 14px;
+  --rmos-chat-bg: #f6f7f9;
+  --rmos-chat-dots: rgba(15, 23, 42, 0.035);
+  --rmos-bubble-in: #ffffff;
+  --rmos-bubble-in-fg: #1f2937;
+  --rmos-bubble-out: #eaf2fb;
+  --rmos-bubble-out-fg: #1f2937;
+  --rmos-bubble-shadow: 0 1px 1px rgba(15, 23, 42, 0.06);
+  --rmos-tick-read: #4a90d9;
+  --rmos-highlight: #8bb8e8;
+  --rmos-danger: #dc2626;
 
   color-scheme: light;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -44,6 +54,16 @@ export const RMOS_CSS = `
   --rmos-accent-fg: #171717;
   --rmos-error-bg: rgba(239, 68, 68, 0.15);
   --rmos-error-fg: #fca5a5;
+  --rmos-chat-bg: #18191c;
+  --rmos-chat-dots: rgba(255, 255, 255, 0.025);
+  --rmos-bubble-in: #26282c;
+  --rmos-bubble-in-fg: #e5e7eb;
+  --rmos-bubble-out: #2c3846;
+  --rmos-bubble-out-fg: #e8eef5;
+  --rmos-bubble-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  --rmos-tick-read: #7cb7f0;
+  --rmos-highlight: #5d86b3;
+  --rmos-danger: #f87171;
   color-scheme: dark;
 }
 .rmos-theme, .rmos-theme *, .rmos-theme *::before, .rmos-theme *::after { box-sizing: border-box; }
@@ -130,22 +150,95 @@ export const RMOS_CSS = `
 .rmos-state { padding: 24px 16px; text-align: center; color: var(--rmos-muted); font-size: 13px; }
 .rmos-state--error { color: var(--rmos-error-fg); }
 
-/* ---------- Thread ---------- */
-.rmos-thread { display: flex; flex-direction: column; min-width: 0; min-height: 0; flex: 1; background: var(--rmos-bg); }
-.rmos-messages { flex: 1; overflow-y: auto; min-height: 0; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+/* ---------- Thread (WhatsApp tarzı desenli zemin) ---------- */
+.rmos-thread {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0; flex: 1;
+  background-color: var(--rmos-chat-bg);
+  background-image: radial-gradient(var(--rmos-chat-dots) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+.rmos-messages { flex: 1; overflow-y: auto; min-height: 0; padding: 16px 20px; display: flex; flex-direction: column; gap: 2px; }
+.rmos-loadmore { display: flex; justify-content: center; padding: 2px 0 10px; flex-shrink: 0; }
+.rmos-loadmore button {
+  border: 1px solid var(--rmos-border); background: var(--rmos-bg); color: var(--rmos-muted);
+  font-size: 12px; padding: 5px 14px; border-radius: 999px; cursor: pointer;
+  box-shadow: var(--rmos-bubble-shadow); transition: color .15s, background .15s;
+}
+.rmos-loadmore button:hover:not(:disabled) { color: var(--rmos-fg); background: var(--rmos-surface); }
+.rmos-loadmore button:disabled { cursor: progress; opacity: .7; }
 .rmos-empty { margin: auto; text-align: center; color: var(--rmos-muted); font-size: 13px; padding: 24px; }
 
 /* ---------- Bubble ---------- */
 .rmos-bubble {
-  max-width: 80%; padding: 8px 12px; background: var(--rmos-surface); color: var(--rmos-fg);
+  max-width: 80%; padding: 6px 9px 4px; background: var(--rmos-bubble-in); color: var(--rmos-bubble-in-fg);
   align-self: flex-start; word-break: break-word; white-space: pre-wrap; position: relative;
-  border-radius: 4px 14px 14px 14px; animation: rmos-fade-up .18s ease;
+  border-radius: 0 8px 8px 8px; box-shadow: var(--rmos-bubble-shadow); margin-top: 8px;
+  animation: rmos-fade-up .18s ease;
 }
-.rmos-bubble--mine { align-self: flex-end; background: var(--rmos-accent); color: var(--rmos-accent-fg); border-radius: 14px 4px 14px 14px; }
-.rmos-bubble__time { display: block; margin-top: 3px; font-size: 10px; opacity: .6; text-align: right; }
+.rmos-bubble--mine { align-self: flex-end; background: var(--rmos-bubble-out); color: var(--rmos-bubble-out-fg); border-radius: 8px 0 8px 8px; }
+/* Grubun ilk balonunda kuyruk */
+.rmos-bubble::before {
+  content: ""; position: absolute; top: 0; left: -7px; width: 8px; height: 13px;
+  background: inherit; clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+.rmos-bubble--mine::before { left: auto; right: -7px; clip-path: polygon(0 0, 100% 0, 0 100%); }
+/* Aynı kişiden ardışık balonlar: kuyruk yok, sıkı aralık */
+.rmos-bubble--mine + .rmos-bubble--mine,
+.rmos-bubble:not(.rmos-bubble--mine) + .rmos-bubble:not(.rmos-bubble--mine) { margin-top: 0; border-radius: 8px; }
+.rmos-bubble--mine + .rmos-bubble--mine::before,
+.rmos-bubble:not(.rmos-bubble--mine) + .rmos-bubble:not(.rmos-bubble--mine)::before { display: none; }
+.rmos-bubble__meta {
+  display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 2px;
+  font-size: 10px; line-height: 1; white-space: nowrap;
+}
+.rmos-bubble__time, .rmos-bubble__edited { opacity: .6; }
+.rmos-bubble__edited { font-style: italic; }
+.rmos-bubble__deleted { display: inline-flex; align-items: center; gap: 5px; font-style: italic; opacity: .65; }
+.rmos-bubble--highlighted { box-shadow: 0 0 0 2px var(--rmos-highlight); }
+.rmos-bubble--menu-open { z-index: 3; }
+
+/* ---------- Okundu bilgisi (tik) ---------- */
+.rmos-tick { display: inline-flex; align-items: center; opacity: .6; }
+.rmos-tick--read { opacity: 1; color: var(--rmos-tick-read); }
+
+/* ---------- Mesaj menüsü (düzenle / sil) ---------- */
+.rmos-msgmenu__btn {
+  position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; padding: 0; border: none;
+  border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  background: var(--rmos-bubble-out); color: inherit; opacity: 0; transition: opacity .12s;
+  box-shadow: -6px 0 8px var(--rmos-bubble-out);
+}
+.rmos-bubble:hover .rmos-msgmenu__btn, .rmos-msgmenu__btn:focus-visible, .rmos-msgmenu__btn--open { opacity: .85; }
+/* Dokunmatik ekranda hover yok: buton hep görünür, metnin üstüne binmesin */
+@media (hover: none) {
+  .rmos-msgmenu__btn { opacity: .6; }
+  .rmos-bubble--actions { padding-right: 30px; }
+}
+.rmos-menu {
+  position: absolute; top: 28px; right: 0; z-index: 5; min-width: 180px; padding: 4px;
+  display: flex; flex-direction: column; white-space: normal; text-align: left;
+  background: var(--rmos-bg); color: var(--rmos-fg); border: 1px solid var(--rmos-border);
+  border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,.18); animation: rmos-pop-in .14s ease;
+}
+.rmos-menu--up { top: auto; bottom: calc(100% + 4px); }
+.rmos-menu__item {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; border: none;
+  border-radius: 6px; background: transparent; color: inherit; font-size: 13px; cursor: pointer; text-align: left;
+}
+.rmos-menu__item:hover, .rmos-menu__item:focus-visible { background: var(--rmos-surface); outline: none; }
+.rmos-menu__item--danger { color: var(--rmos-danger); }
+.rmos-menu__note { padding: 6px 10px 4px; font-size: 12px; color: var(--rmos-muted); }
 
 /* ---------- Composer ---------- */
-.rmos-composer { display: flex; align-items: flex-end; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--rmos-border); background: var(--rmos-bg); flex-shrink: 0; }
+.rmos-composer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--rmos-border); background: var(--rmos-surface); flex-shrink: 0; }
+.rmos-editbar {
+  flex-basis: 100%; display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 10px;
+  border-left: 3px solid var(--rmos-highlight); border-radius: 8px; background: var(--rmos-bg);
+}
+.rmos-editbar__icon { display: inline-flex; color: var(--rmos-highlight); }
+.rmos-editbar__text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
+.rmos-editbar__title { font-size: 12px; font-weight: 600; color: var(--rmos-highlight); }
+.rmos-editbar__orig { font-size: 12px; color: var(--rmos-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rmos-composer textarea {
   flex: 1; resize: none; max-height: 120px; min-height: 38px; padding: 9px 12px; border: 1px solid var(--rmos-border);
   border-radius: 10px; font: inherit; color: var(--rmos-fg); outline: none; background: var(--rmos-bg); line-height: 1.4;
@@ -156,10 +249,9 @@ export const RMOS_CSS = `
 .rmos-send {
   display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
   width: 38px; height: 38px; border-radius: 10px; border: none; background: var(--rmos-accent); color: var(--rmos-accent-fg);
-  cursor: pointer; transition: filter .15s, opacity .15s, transform .15s;
+  cursor: pointer; transition: filter .15s, opacity .15s;
 }
-.rmos-send:hover:not(:disabled) { filter: brightness(1.12); }
-.rmos-send:active:not(:disabled) { transform: scale(.95); }
+.rmos-send:hover:not(:disabled) { filter: brightness(1.08); }
 .rmos-send:disabled { opacity: .45; cursor: not-allowed; }
 
 /* ---------- Trigger (buton) + popover card ---------- */
@@ -171,10 +263,10 @@ export const RMOS_CSS = `
 .rmos-trigger {
   position: relative; border: none; background: var(--rmos-accent); color: var(--rmos-accent-fg); margin: 0; padding: 0;
   width: 54px; height: 54px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
-  box-shadow: 0 8px 24px rgba(0,0,0,.22); cursor: pointer; transition: transform .2s ease, filter .2s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,.22); cursor: pointer; transition: filter .15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
-.rmos-trigger:hover { filter: brightness(1.1); transform: translateY(-2px); }
-.rmos-trigger:active { transform: scale(.94); }
+.rmos-trigger:hover { filter: brightness(1.08); }
 .rmos-trigger:focus-visible { outline: 2px solid var(--rmos-accent); outline-offset: 3px; }
 
 /* Inline tetikleyici: minimal ikon (+ opsiyonel yazı) — sidebar/menü için */
@@ -182,11 +274,12 @@ export const RMOS_CSS = `
   width: auto; height: auto; border-radius: 8px; background: transparent; color: var(--rmos-fg);
   box-shadow: none; gap: 8px; padding: 8px 10px; font-weight: 500; white-space: nowrap;
 }
-.rmos-trigger--inline:hover { background: var(--rmos-surface); filter: none; transform: none; }
-.rmos-trigger--inline:active { transform: scale(.97); }
+.rmos-trigger--inline { transition: background .15s ease; }
+.rmos-trigger--inline:hover { background: var(--rmos-surface); filter: none; }
 
 .rmos-trigger-iconwrap { position: relative; display: inline-flex; }
-.rmos-trigger-icon { display: inline-flex; animation: rmos-spin-in .25s ease; }
+.rmos-trigger-icon { display: inline-flex; transition: opacity .1s ease; }
+.rmos-trigger:active .rmos-trigger-icon { opacity: .55; }
 
 .rmos-card {
   position: fixed; z-index: 2147483001; display: flex; flex-direction: column; overflow: hidden;
@@ -194,6 +287,28 @@ export const RMOS_CSS = `
   box-shadow: 0 16px 48px rgba(0,0,0,.24); animation: rmos-pop-in .22s cubic-bezier(.2,.9,.3,1.2);
 }
 .rmos-card__body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+/* ---------- Yatay (WhatsApp tarzı) iki panel: solda kişiler, sağda sohbet ---------- */
+.rmos-split { flex: 1; min-height: 0; display: flex; }
+.rmos-sidebar {
+  width: 36%; min-width: 260px; max-width: 340px; flex-shrink: 0; min-height: 0;
+  display: flex; flex-direction: column; border-right: 1px solid var(--rmos-border); background: var(--rmos-bg);
+}
+.rmos-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; }
+.rmos-split .rmos-header { height: 64px; background: var(--rmos-surface); }
+.rmos-split .rmos-brand { align-items: center; }
+.rmos-split .rmos-bubble { max-width: 65%; }
+.rmos-welcome {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 32px; text-align: center; background: var(--rmos-surface);
+}
+.rmos-welcome__close { position: absolute; top: 16px; right: 14px; }
+.rmos-welcome__icon {
+  display: inline-flex; align-items: center; justify-content: center; width: 80px; height: 80px;
+  border-radius: 50%; background: var(--rmos-bg); color: var(--rmos-muted); margin-bottom: 4px;
+}
+.rmos-welcome__title { font-size: 20px; font-weight: 600; color: var(--rmos-fg); }
+.rmos-welcome__text { margin: 0; max-width: 320px; font-size: 13px; color: var(--rmos-muted); }
 
 /* ---------- Scrollbar ---------- */
 .rmos-list::-webkit-scrollbar, .rmos-messages::-webkit-scrollbar { width: 8px; }
@@ -203,7 +318,6 @@ export const RMOS_CSS = `
 @keyframes rmos-pop-in { from { opacity: 0; transform: translateY(6px) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes rmos-fade-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes rmos-badge-in { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
-@keyframes rmos-spin-in { from { opacity: 0; transform: rotate(-90deg) scale(.6); } to { opacity: 1; transform: rotate(0) scale(1); } }
 
 @media (max-width: 480px) {
   .rmos-card { left: 12px !important; right: 12px !important; width: auto !important;

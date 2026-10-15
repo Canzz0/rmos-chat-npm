@@ -32,7 +32,8 @@ export interface RmosChatProps extends Pick<ChatConfig, "token" | "userId"> {
 
 /**
  * Tek butonluk chat. Her zaman bir **buton** render eder; tıklayınca sohbet
- * kartı açılır (helpdesk mantığı). Host sayfanın temasını (light/dark) otomatik
+ * kartı açılır (helpdesk mantığı). Kart WhatsApp tarzı yataydır: solda kişiler,
+ * sağda seçili sohbet; dar ekranlarda tek panele düşer. Host sayfanın temasını (light/dark) otomatik
  * algılar ve @rmosyazilim/helpdesk ile aynı tasarım dilini kullanır.
  *
  * ```tsx
@@ -52,6 +53,9 @@ export function RmosChat({ token, userId, ...ui }: RmosChatProps) {
 }
 
 type InnerProps = Omit<RmosChatProps, "token" | "userId">;
+
+/** Bu genişliğin altında kart tek panelli (liste → sohbet) çalışır. */
+const SPLIT_MIN_WIDTH = 640;
 
 function RmosChatInner({
   floating = false,
@@ -85,7 +89,8 @@ function RmosChatInner({
       setOpen(false);
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      // İç bileşenler (mesaj menüsü, düzenleme) Esc'i kendileri kullanınca preventDefault eder
+      if (e.key === "Escape" && !e.defaultPrevented) setOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -117,64 +122,109 @@ function RmosChatInner({
         ? undefined
         : title;
 
+  // Kart yeterince genişse WhatsApp tarzı yatay düzen: solda kişiler, sağda sohbet.
+  // Dar ekranda (mobil) tek panel + geri butonu.
+  const split =
+    typeof cardPosition?.width === "number" && cardPosition.width >= SPLIT_MIN_WIDTH;
+
+  const closeButton = (
+    <button
+      type="button"
+      className="rmos-iconbtn"
+      onClick={() => setOpen(false)}
+      aria-label="Kapat"
+    >
+      <CloseIcon size={18} />
+    </button>
+  );
+
+  const brandHeader = (
+    <div className="rmos-header">
+      <div className="rmos-brand">
+        <span className="rmos-title-icon">
+          <ChatIcon size={18} />
+        </span>
+        <div className="rmos-brand-text">
+          <span className="rmos-title">{title}</span>
+          <p className="rmos-desc">{description}</p>
+        </div>
+      </div>
+      {split ? null : <div className="rmos-actions">{closeButton}</div>}
+    </div>
+  );
+
+  const contactHeader = selected ? (
+    <div className="rmos-header">
+      {split ? null : (
+        <button
+          type="button"
+          className="rmos-iconbtn"
+          onClick={() => setSelected(null)}
+          aria-label="Geri"
+        >
+          <BackIcon size={18} />
+        </button>
+      )}
+      <Avatar
+        name={getUserFullName(selected)}
+        userId={String(selected.fldUserID)}
+        size={32}
+        showDetails={false}
+      />
+      <span className="rmos-header__title">{getUserFullName(selected)}</span>
+      <div className="rmos-actions">{closeButton}</div>
+    </div>
+  ) : null;
+
+  const thread = selected ? (
+    <ChatThread key={selectedId} contact={selected} showHeader={false} />
+  ) : null;
+
+  const list = (
+    <ConversationList selectedUserId={selectedId} onSelect={setSelected} />
+  );
+
   const card = (
     <div
       ref={cardRef}
-      className="rmos-theme rmos-card"
+      className={`rmos-theme rmos-card${split ? " rmos-card--split" : ""}`}
       data-rmos-theme={theme}
       style={cardPosition ?? undefined}
       role="dialog"
       aria-label={title}
     >
-      <div className="rmos-header">
-        {selected ? (
-          <>
-            <button
-              type="button"
-              className="rmos-iconbtn"
-              onClick={() => setSelected(null)}
-              aria-label="Geri"
-            >
-              <BackIcon size={18} />
-            </button>
-            <Avatar
-              name={getUserFullName(selected)}
-              userId={String(selected.fldUserID)}
-              size={32}
-              showDetails={false}
-            />
-            <span className="rmos-header__title">{getUserFullName(selected)}</span>
-          </>
-        ) : (
-          <div className="rmos-brand">
-            <span className="rmos-title-icon">
-              <ChatIcon size={18} />
-            </span>
-            <div className="rmos-brand-text">
-              <span className="rmos-title">{title}</span>
-              <p className="rmos-desc">{description}</p>
-            </div>
-          </div>
-        )}
-        <div className="rmos-actions">
-          <button
-            type="button"
-            className="rmos-iconbtn"
-            onClick={() => setOpen(false)}
-            aria-label="Kapat"
-          >
-            <CloseIcon size={18} />
-          </button>
+      {split ? (
+        <div className="rmos-split">
+          <aside className="rmos-sidebar">
+            {brandHeader}
+            {list}
+          </aside>
+          <section className="rmos-main">
+            {selected ? (
+              <>
+                {contactHeader}
+                {thread}
+              </>
+            ) : (
+              <div className="rmos-welcome">
+                <div className="rmos-welcome__close">{closeButton}</div>
+                <span className="rmos-welcome__icon">
+                  <ChatIcon size={36} />
+                </span>
+                <span className="rmos-welcome__title">{title}</span>
+                <p className="rmos-welcome__text">
+                  Sohbet etmek için soldan bir kişi seçin.
+                </p>
+              </div>
+            )}
+          </section>
         </div>
-      </div>
-
-      <div className="rmos-card__body">
-        {selected ? (
-          <ChatThread contact={selected} showHeader={false} />
-        ) : (
-          <ConversationList selectedUserId={selectedId} onSelect={setSelected} />
-        )}
-      </div>
+      ) : (
+        <>
+          {selected ? contactHeader : brandHeader}
+          <div className="rmos-card__body">{selected ? thread : list}</div>
+        </>
+      )}
     </div>
   );
 
@@ -190,7 +240,7 @@ function RmosChatInner({
         onClick={() => setOpen((v) => !v)}
       >
         <span className="rmos-trigger-iconwrap">
-          <span className="rmos-trigger-icon" key={open ? "close" : "chat"}>
+          <span className="rmos-trigger-icon">
             {floating && open ? (
               <CloseIcon size={24} />
             ) : (

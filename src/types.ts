@@ -77,8 +77,14 @@ export interface ChatMessage {
   senderId: string;
   text: string;
   createdAt: number;
-  /** sent | delivered | read */
+  /** @deprecated Okundu bilgisi konuşmadaki `readAt` ile hesaplanır. */
   status?: "sent" | "delivered" | "read";
+  /** Mesaj düzenlendiyse son düzenleme zamanı (ms) */
+  editedAt?: number;
+  /** Mesaj silindiyse true (metin boşaltılır, balon "silindi" olarak görünür) */
+  deleted?: boolean;
+  /** Henüz sunucuya yazılmadı (yerel bekleyen yazma) */
+  pending?: boolean;
 }
 
 export interface FirebaseTokenResponse {
@@ -96,4 +102,10 @@ export interface ChatConversation {
   } | null;
   /** Mevcut kullanıcı için okunmamış mesaj sayısı */
   unreadCount: number;
+  /**
+   * Katılımcının konuşmayı en son okuduğu zaman (ms): userId → zaman.
+   * Bir mesaj, karşı tarafın readAt değeri mesajın (editedAt ?? createdAt)
+   * zamanından büyük/eşitse okunmuş sayılır.
+   */
+  readAt: Record<string, number>;
 }

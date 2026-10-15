@@ -8,8 +8,9 @@ import {
 
 const GAP = 10;
 const MARGIN = 12;
-const CARD_WIDTH = 384;
-const CARD_MAX_HEIGHT = 580;
+/** Yatay (WhatsApp tarzı) iki panelli kart: solda kişiler, sağda sohbet. */
+const CARD_WIDTH = 920;
+const CARD_MAX_HEIGHT = 640;
 const MIN_HEIGHT_BELOW = 320;
 
 const useIsomorphicLayoutEffect =

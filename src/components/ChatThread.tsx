@@ -6,11 +6,11 @@ import { useConversations } from "../hooks/useConversations";
 import { useMessages } from "../hooks/useMessages";
 import { useSendMessage } from "../hooks/useSendMessage";
 import { getUserFullName } from "../hooks/useUsers";
-import type { ChatUser } from "../types";
+import type { ChatMessage, ChatUser } from "../types";
 import { BackIcon, CloseIcon } from "../ui/icons";
 import { Avatar } from "./Avatar";
 import { MessageInput } from "./MessageInput";
-import { MessageList } from "./MessageList";
+import { MessageList, messageStatus } from "./MessageList";
 
 export interface ChatThreadProps {
   /** Konuşulan kişi; null ise boş durum gösterilir */
@@ -24,7 +24,10 @@ export interface ChatThreadProps {
   className?: string;
 }
 
-/** Seçili kişiyle gerçek zamanlı sohbet: başlık + mesajlar + yazma alanı. */
+/**
+ * Seçili kişiyle gerçek zamanlı sohbet: başlık + mesajlar + yazma alanı.
+ * Kendi mesajlarında okundu bilgisi (tik) görünür; mesajlar düzenlenip silinebilir.
+ */
 export function ChatThread({
   contact,
   onBack,
@@ -34,25 +37,33 @@ export function ChatThread({
 }: ChatThreadProps) {
   const { userId, firebaseReady, firebaseError, firestore } = useChatContext();
   const [sendError, setSendError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<ChatMessage | null>(null);
 
-  const conversationId = contact
-    ? directConversationId(userId, String(contact.fldUserID))
-    : null;
+  const contactId = contact ? String(contact.fldUserID) : null;
+  const conversationId = contactId ? directConversationId(userId, contactId) : null;
 
-  const { messages, loading, error } = useMessages(conversationId);
-  const { send } = useSendMessage();
+  const { messages, loading, error, hasMore, loadingMore, loadMore } =
+    useMessages(conversationId);
+  const { send, edit, remove } = useSendMessage();
   const { conversations } = useConversations();
-  const unreadCount = conversationId
-    ? conversations[conversationId]?.unreadCount ?? 0
-    : 0;
+  const conversation = conversationId ? conversations[conversationId] : undefined;
+  const unreadCount = conversation?.unreadCount ?? 0;
+  const contactReadAt = contactId ? conversation?.readAt[contactId] ?? 0 : 0;
+
+  // Henüz okuma zamanı yazılmamış (eski) konuşmalarda da karşı tarafa okundu bilgisi gitsin
+  const last = conversation?.lastMessage ?? null;
+  const myReadAt = conversation?.readAt[userId] ?? 0;
+  const needsRead =
+    unreadCount > 0 ||
+    (last !== null && last.senderId !== userId && last.createdAt > myReadAt);
 
   // Sohbet açıkken gelen mesajlar okunmuş sayılır
   useEffect(() => {
-    if (!conversationId || !firestore || unreadCount === 0) return;
+    if (!conversationId || !firestore || !needsRead) return;
     markConversationRead(firestore, conversationId, userId).catch((err) => {
       console.warn("[rmos-chat] Okundu bilgisi yazılamadı:", err);
     });
-  }, [conversationId, firestore, userId, unreadCount]);
+  }, [conversationId, firestore, userId, needsRead]);
 
   const cls = className ? `rmos-thread ${className}` : "rmos-thread";
 
@@ -66,11 +77,34 @@ export function ChatThread({
     );
   }
 
+  const isLast = (id: string) => messages[messages.length - 1]?.id === id;
+
   async function handleSend(text: string) {
     if (!conversationId) return;
     setSendError(null);
     try {
-      await send(conversationId, text);
+      if (editing) {
+        if (text !== editing.text) {
+          await edit(conversationId, editing.id, text, {
+            isLast: isLast(editing.id),
+            wasRead: messageStatus(editing, contactReadAt) === "read",
+          });
+        }
+        setEditing(null);
+      } else {
+        await send(conversationId, text);
+      }
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function handleDelete(message: ChatMessage) {
+    if (!conversationId) return;
+    setSendError(null);
+    if (editing?.id === message.id) setEditing(null);
+    try {
+      await remove(conversationId, message.id, { isLast: isLast(message.id) });
     } catch (err) {
       setSendError(err instanceof Error ? err.message : String(err));
     }
@@ -102,6 +136,13 @@ export function ChatThread({
         currentUserId={userId}
         loading={loading}
         error={error ?? firebaseError}
+        readAt={contactReadAt}
+        onEdit={setEditing}
+        onDelete={(m) => void handleDelete(m)}
+        editingId={editing?.id ?? null}
+        hasMore={hasMore}
+        loadingMore={loadingMore}
+        onLoadMore={loadMore}
       />
 
       {sendError ? (
@@ -114,6 +155,8 @@ export function ChatThread({
         onSend={handleSend}
         disabled={!firebaseReady || Boolean(firebaseError)}
         placeholder={firebaseReady ? "Mesaj yazın..." : "Bağlanıyor..."}
+        editing={editing ? { id: editing.id, text: editing.text } : null}
+        onCancelEdit={() => setEditing(null)}
       />
     </div>
   );

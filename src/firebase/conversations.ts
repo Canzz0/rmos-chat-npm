@@ -16,6 +16,7 @@ import type { ChatConversation } from "../types";
  *   lastMessage: { text, senderId, createdAt }
  *   updatedAt: Timestamp
  *   unread: { [userId]: number }
+ *   readAt: { [userId]: Timestamp }  — okundu bilgisi (tik) için
  */
 function conversationDoc(db: Firestore, conversationId: string) {
   return doc(db, "conversations", conversationId);
@@ -35,6 +36,9 @@ function mapConversation(
   const last = data.lastMessage as Record<string, unknown> | undefined;
   const unread = (data.unread ?? {}) as Record<string, unknown>;
   const count = Number(unread[userId] ?? 0);
+  const readAtRaw = (data.readAt ?? {}) as Record<string, unknown>;
+  const readAt: Record<string, number> = {};
+  for (const [uid, ts] of Object.entries(readAtRaw)) readAt[uid] = toMillis(ts);
 
   return {
     id,
@@ -49,6 +53,7 @@ function mapConversation(
         }
       : null,
     unreadCount: Number.isFinite(count) && count > 0 ? count : 0,
+    readAt,
   };
 }
 
@@ -134,7 +139,33 @@ export async function touchConversationOnSend(
   );
 }
 
-/** Kullanıcının bu konuşmadaki okunmamış sayacını sıfırlar. */
+/**
+ * Düzenleme/silme sonrası konuşma özetini günceller.
+ * - `lastText` verilirse son mesaj önizlemesi değişir (düzenlenen/silinen mesaj sonuncuysa).
+ * - `bumpUnread` ise alıcının okunmamış sayacı artar; düzenlenen mesaj daha önce
+ *   okunmuşsa yeniden "okunmadı" olur ve alıcı açınca okundu bilgisi tazelenir.
+ */
+export async function touchConversationOnChange(
+  db: Firestore,
+  conversationId: string,
+  senderId: string,
+  { lastText, bumpUnread }: { lastText?: string; bumpUnread?: boolean },
+): Promise<void> {
+  const data: Record<string, unknown> = { updatedAt: serverTimestamp() };
+  if (lastText !== undefined) data.lastMessage = { text: lastText };
+
+  if (bumpUnread) {
+    const unread: Record<string, unknown> = {};
+    for (const p of parseDirectConversationId(conversationId) ?? []) {
+      if (p !== senderId) unread[p] = increment(1);
+    }
+    data.unread = unread;
+  }
+
+  await setDoc(conversationDoc(db, conversationId), data, { merge: true });
+}
+
+/** Kullanıcının okunmamış sayacını sıfırlar ve okuma zamanını (readAt) yazar. */
 export async function markConversationRead(
   db: Firestore,
   conversationId: string,
@@ -142,7 +173,7 @@ export async function markConversationRead(
 ): Promise<void> {
   await setDoc(
     conversationDoc(db, conversationId),
-    { unread: { [userId]: 0 } },
+    { unread: { [userId]: 0 }, readAt: { [userId]: serverTimestamp() } },
     { merge: true },
   );
 }

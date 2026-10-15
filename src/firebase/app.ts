@@ -1,5 +1,5 @@
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
+import { getAuth, inMemoryPersistence, initializeAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import type { FirebaseWebConfig } from "../types";
 
@@ -17,7 +17,11 @@ export function getOrInitFirebase(config: FirebaseWebConfig): FirebaseHandles {
 
   return {
     app,
-    auth: getAuth(app),
+    // Oturum yalnızca bu sekmenin belleğinde tutulur. Varsayılan (IndexedDB)
+    // kalıcılık aynı origin'deki tüm sekmelerde paylaşılır: başka sekmede farklı
+    // kullanıcıyla giriş yapılınca bu sekmenin Firebase kullanıcısı da değişir,
+    // yazmalar yanlış uid ile gider. Token her açılışta zaten yeniden alınıyor.
+    auth: existing ? getAuth(app) : initializeAuth(app, { persistence: inMemoryPersistence }),
     firestore: getFirestore(app),
   };
 }

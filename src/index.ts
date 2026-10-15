@@ -4,7 +4,12 @@ export { useChatContext } from "./context/useChatContext";
 export { useGet, type UseGetOptions, type UseGetResult } from "./hooks/useGet";
 export { usePost, type UsePostResult } from "./hooks/usePost";
 export { useUsers, getUserFullName, type UseUsersResult } from "./hooks/useUsers";
-export { useMessages, type UseMessagesResult } from "./hooks/useMessages";
+export {
+  useMessages,
+  DEFAULT_MESSAGE_PAGE_SIZE,
+  type UseMessagesOptions,
+  type UseMessagesResult,
+} from "./hooks/useMessages";
 export {
   useConversations,
   type UseConversationsResult,
@@ -42,11 +47,20 @@ export {
   ConversationList,
   type ConversationListProps,
 } from "./components/ConversationList";
-export { MessageList, type MessageListProps } from "./components/MessageList";
+export {
+  MessageList,
+  messageStatus,
+  type MessageListProps,
+} from "./components/MessageList";
 export {
   MessageBubble,
   type MessageBubbleProps,
+  type MessageStatus,
 } from "./components/MessageBubble";
+export {
+  DELETED_MESSAGE_TEXT,
+  type ChangeMessageOptions,
+} from "./firebase/messages";
 export {
   MessageInput,
   type MessageInputProps,

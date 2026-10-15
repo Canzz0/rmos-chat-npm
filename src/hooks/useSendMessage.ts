@@ -1,15 +1,34 @@
 import { useCallback, useState } from "react";
+import type { Firestore } from "firebase/firestore";
 import { useChatContext } from "../context/useChatContext";
-import { sendMessage } from "../firebase/messages";
+import {
+  deleteMessage,
+  editMessage,
+  sendMessage,
+  type ChangeMessageOptions,
+} from "../firebase/messages";
 
 export interface UseSendMessageResult {
   send: (conversationId: string, text: string) => Promise<string>;
+  /** Kendi gönderdiğin mesajı düzenler (okundu bilgisi sıfırlanır). */
+  edit: (
+    conversationId: string,
+    messageId: string,
+    text: string,
+    options?: ChangeMessageOptions,
+  ) => Promise<void>;
+  /** Kendi gönderdiğin mesajı herkes için siler. */
+  remove: (
+    conversationId: string,
+    messageId: string,
+    options?: Pick<ChangeMessageOptions, "isLast">,
+  ) => Promise<void>;
   loading: boolean;
   error: Error | null;
 }
 
 /**
- * Mesajı Firebase Firestore'a yazar.
+ * Mesajı Firebase Firestore'a yazar, düzenler ve siler.
  * Gönderen userId context'ten alınır; baseUrl kullanılmaz.
  */
 export function useSendMessage(): UseSendMessageResult {
@@ -17,8 +36,8 @@ export function useSendMessage(): UseSendMessageResult {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const send = useCallback(
-    async (conversationId: string, text: string): Promise<string> => {
+  const run = useCallback(
+    async <T>(fn: (db: Firestore) => Promise<T>): Promise<T> => {
       if (!firebaseReady || !firestore) {
         throw new Error("Firebase henüz hazır değil.");
       }
@@ -27,9 +46,9 @@ export function useSendMessage(): UseSendMessageResult {
       setError(null);
 
       try {
-        const id = await sendMessage(firestore, conversationId, userId, text);
+        const result = await fn(firestore);
         setLoading(false);
-        return id;
+        return result;
       } catch (err: unknown) {
         const next = err instanceof Error ? err : new Error(String(err));
         setError(next);
@@ -37,8 +56,33 @@ export function useSendMessage(): UseSendMessageResult {
         throw next;
       }
     },
-    [firestore, firebaseReady, userId],
+    [firestore, firebaseReady],
   );
 
-  return { send, loading, error };
+  const send = useCallback(
+    (conversationId: string, text: string) =>
+      run((db) => sendMessage(db, conversationId, userId, text)),
+    [run, userId],
+  );
+
+  const edit = useCallback(
+    (
+      conversationId: string,
+      messageId: string,
+      text: string,
+      options?: ChangeMessageOptions,
+    ) => run((db) => editMessage(db, conversationId, messageId, userId, text, options)),
+    [run, userId],
+  );
+
+  const remove = useCallback(
+    (
+      conversationId: string,
+      messageId: string,
+      options?: Pick<ChangeMessageOptions, "isLast">,
+    ) => run((db) => deleteMessage(db, conversationId, messageId, userId, options)),
+    [run, userId],
+  );
+
+  return { send, edit, remove, loading, error };
 }
